@@ -5,53 +5,51 @@
 </template>
 
 <script setup lang="ts">
+import { useWebSocket } from '@vueuse/core'
 const ghosts = reactive<{ [key: string]: { top: 0; left: 0; active: boolean } }>({})
 
-const socket = new WebSocket('ws://10.0.36.10:3000/ws/socket')
-
 const ghostID = ref('')
+const { send } = useWebSocket('/ws/socket', {
+	onMessage: (ws, event) => {
+		const response = JSON.parse(event.data)
 
-socket.onmessage = (event: MessageEvent) => {
-	const response = JSON.parse(event.data)
+		switch (response.type) {
+			case 'enter':
+				ghostID.value = response.ghost
 
-	switch (response.type) {
-		case 'enter':
-			ghostID.value = response.ghost
+				Object.assign(ghosts, response.ghosts)
 
-			Object.assign(ghosts, response.ghosts)
+				break
 
-			console.log(ghosts)
+			case 'joined':
+				Object.assign(ghosts, response.ghosts)
 
-			break
+				useToast().add({ title: 'Someone Joined' })
 
-		case 'joined':
-			Object.assign(ghosts, response.ghosts)
+				break
 
-			useToast().add({ title: 'Someone Joined' })
+			case 'movement':
+				Object.assign(ghosts, response.ghosts)
 
-			break
+				break
 
-		case 'movement':
-			Object.assign(ghosts, response.ghosts)
+			case 'quit':
+				Object.assign(ghosts, response.ghosts)
 
-			console.log(response.ghosts)
+				useToast().add({ title: 'Someone Quit lmaooo' })
 
-			break
-
-		case 'quit':
-			Object.assign(ghosts, response.ghosts)
-
-			useToast().add({ title: 'Someone Quit lmaooo' })
-
-			break
-	}
-}
+				break
+		}
+	},
+})
 
 document.addEventListener('keydown', (event) => {
 	moveCharacter(event.key)
 })
 
 function moveCharacter(key: string) {
+	if (!ghostID.value) return
+
 	switch (key) {
 		case 'w':
 			ghosts[ghostID.value].top -= 10
@@ -74,7 +72,7 @@ function moveCharacter(key: string) {
 			break
 	}
 
-	socket.send(
+	send(
 		JSON.stringify({
 			type: 'movement',
 			top: ghosts[ghostID.value].top,
