@@ -7,6 +7,7 @@ interface GhostInterface {
 	top: number
 	left: number
 	active: boolean
+	name: string
 }
 
 interface Ghosts {
@@ -16,27 +17,21 @@ interface Ghosts {
 const ghosts = reactive<{ [key: string]: GhostInterface }>({})
 
 export default defineWebSocketHandler({
-	open(peer) {
-		peer.subscribe(channel)
-
-		Object.assign(ghosts, {
-			[peer.id]: {
-				top: 0,
-				left: 0,
-				active: true,
-			},
-		})
-
-		publishMessage(peer).joined({ ghosts })
-
-		sendMessage(peer).enter({ ghost: peer.id, ghosts })
-	},
 	message(peer, message) {
 		const request = JSON.parse(message.text())
 
 		switch (request.type) {
 			case 'movement':
 				onMessage(peer).movement(request)
+
+				break
+
+			case 'join':
+				onMessage(peer).join({ name: request.name })
+
+				publishMessage(peer).joined({ ghosts, name: request.name })
+
+				sendMessage(peer).enter({ ghost: peer.id, ghosts })
 
 				break
 		}
@@ -64,6 +59,13 @@ const onMessage = (peer: Peer) => ({
 
 		sendMessage(peer).quit({ ghost: peer.id, ghosts })
 	},
+	join: (request: { name: string }) => {
+		peer.subscribe(channel)
+
+		Object.assign(ghosts, {
+			[peer.id]: { top: 0, left: 0, active: true, name: request.name },
+		})
+	},
 })
 
 const sendMessage = (peer: Peer) => ({
@@ -80,30 +82,12 @@ const sendMessage = (peer: Peer) => ({
 
 const publishMessage = (peer: Peer) => ({
 	movement: (request: { ghost: string; ghosts: Ghosts }) => {
-		peer.publish(
-			channel,
-			JSON.stringify({
-				type: 'movement',
-				...request,
-			})
-		)
+		peer.publish(channel, JSON.stringify({ type: 'movement', ...request }))
 	},
 	quit: (request: { ghost: string; ghosts: Ghosts }) => {
-		peer.publish(
-			channel,
-			JSON.stringify({
-				type: 'quit',
-				...request,
-			})
-		)
+		peer.publish(channel, JSON.stringify({ type: 'quit', ...request }))
 	},
-	joined: (request: { ghosts: Ghosts }) => {
-		peer.publish(
-			channel,
-			JSON.stringify({
-				type: 'joined',
-				...request,
-			})
-		)
+	joined: (request: { ghosts: Ghosts; name: string }) => {
+		peer.publish(channel, JSON.stringify({ type: 'joined', ...request }))
 	},
 })
