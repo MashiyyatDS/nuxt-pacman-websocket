@@ -1,0 +1,12 @@
+extend type User {
+	first_name: String
+	middle_name: String
+	last_name: String
+	email: String
+	age: Int
+}
+
+extend type Query {
+	users: [User]
+	user(age: Int!): User
+}

@@ -1,36 +1,61 @@
 import { buildSchema, graphql } from 'graphql'
-import { readBody, getQuery } from 'h3'
+import { readBody } from 'h3'
 
 const schema = buildSchema(`
-  type User {
-    first_name: String
-    middle_name: String
-    last_name: String
-    email: String
-  }
+type User {
+	first_name: String
+	middle_name: String
+	last_name: String
+	email: String
+	age: Int
+}
 
-  type Query {
-    users: [User]
-	user: User
-  }
+type Query {
+	users: [User]
+	user(age: Int!): User
+}	
+
+input UserInput { 
+	first_name: String
+	middle_name: String
+	last_name: String
+	email: String
+	age: Int!
+}
+
+type Mutation {
+	addUser(input: UserInput): User
+}
 `)
+
+type User = {
+	first_name: string
+	middle_name: string
+	last_name: string
+	email: string
+	age: number
+}
 
 const rootValue = {
 	async users() {
 		return await $fetch('https://retoolapi.dev/VEplD7/data')
 	},
-	user() {
+	user(args: { age: number }) {
 		return {
 			first_name: 'Mashiyyat',
 			middle_name: 'Villasenor',
 			last_name: 'Delos Santos',
 			email: 'delossantos.mash@gmail.com',
+			age: args.age,
 		}
+	},
+	addUser(args: { input: User }) {
+		return args.input
 	},
 }
 
 export default defineEventHandler(async (event) => {
-	const method = event.node.req.method || 'GET'
+	const method = event.node.req.method
 
 	let query: string | undefined
 	let variables = undefined
@@ -41,17 +66,12 @@ export default defineEventHandler(async (event) => {
 		query = body.query
 		variables = body.variables
 		operationName = body.operationName
-	} else if (method === 'GET') {
-		const queryParams = getQuery(event)
-		query = queryParams.query as string
-		variables = queryParams.variables
-		operationName = queryParams.operationName as string
 	}
 
 	if (!query) {
-		return {
-			errors: [{ message: 'No query provided' }],
-		}
+		sendError(event, createError({ statusCode: 404, message: 'Page not found' }))
+
+		return
 	}
 
 	const result = await graphql({
