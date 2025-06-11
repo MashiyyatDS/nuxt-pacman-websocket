@@ -19,6 +19,8 @@
     "@unhead/vue": "^2.0.8",
     "@vueuse/core": "^13.2.0",
     "eslint": "^9.26.0",
+    "graphql": "^16.11.0",
+    "graphql-http": "^1.22.4",
     "gsap": "^3.13.0",
     "nuxt": "^3.17.3",
     "typescript": "^5.8.3",

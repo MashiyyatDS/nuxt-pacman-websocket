@@ -107,12 +107,3 @@ function join() {
 	open.value = false
 }
 </script>
-
-<style scoped>
-.ghost {
-	width: 30px;
-	position: absolute;
-	top: 0px;
-	left: 0px;
-}
-</style>
